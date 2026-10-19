@@ -1,6 +1,6 @@
 ---
 name: timesheet_fill
-description: Write one workday's timesheet row (French title and description) from your git commits and Claude Code sessions, into ~/timesheets/timesheet.csv.
+description: Write one workday's timesheet row (French title and description) from your git commits and Claude Code sessions, into timesheets\timesheet.csv on the Desktop (Windows) or ~/timesheets/timesheet.csv (macOS, Linux).
 ---
 
 Write one timesheet row for one workday of the user's work.

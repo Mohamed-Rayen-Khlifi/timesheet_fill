@@ -1,6 +1,8 @@
 # timesheet_fill
 
-A Claude Code skill that writes one workday's timesheet row, with a French title and description, from your git commits and Claude Code sessions. Rows go to `~/timesheets/timesheet.csv`.
+A Claude Code skill that writes one workday's timesheet row, with a French title and description, from your git commits and Claude Code sessions. Rows go to `timesheets\timesheet.csv` on your Desktop on Windows, and to `~/timesheets/timesheet.csv` on macOS and Linux.
+
+On Windows the skill finds the Desktop where Windows keeps it, including a Desktop moved into OneDrive.
 
 It is a standalone copy of Pegasus's `/pegasus_timesheet` skill: it carries its own CLI and does not need Pegasus.
 
@@ -13,7 +15,15 @@ No npm packages are needed.
 
 ## Install
 
-Clone the repo into your personal skills folder:
+Clone the repo into your personal skills folder.
+
+On Windows, in PowerShell:
+
+```
+git clone https://gitlab.waycon-stamp.com/MohamedRayen.Khlifi/timesheet_fill.git "$env:USERPROFILE\.claude\skills\timesheet_fill"
+```
+
+On macOS or Linux:
 
 ```
 git clone https://gitlab.waycon-stamp.com/MohamedRayen.Khlifi/timesheet_fill.git ~/.claude/skills/timesheet_fill

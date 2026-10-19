@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { configDir as defaultConfigDir, loadConfig, saveConfig } from './config.js';
+import { configDir as defaultConfigDir, loadConfig, saveConfig, timesheetDir } from './config.js';
 import { dayWindow } from './timesheet/day.js';
 import { writeRow } from './timesheet/csv.js';
 import { sessionsDir, readSessions } from './timesheet/sessions.js';
@@ -221,7 +221,7 @@ export async function timesheetCommand(args, deps = {}) {
   const {
     claudeDir = sessionsDir({ home }),
     configDir = defaultConfigDir(),
-    csvPath = path.join(home, 'timesheets', 'timesheet.csv'),
+    csvPath,
     readStdin = readAll,
     out = console.log,
     err = console.error,
@@ -234,7 +234,10 @@ export async function timesheetCommand(args, deps = {}) {
     return 1;
   }
   const { values, positionals: [verb, ...rest] } = parsed;
-  if (verb === 'write') return writeVerb(Boolean(values.replace), { csvPath, readStdin, out, err });
+  if (verb === 'write') {
+    const target = csvPath ?? path.join(timesheetDir({ home }), 'timesheet.csv');
+    return writeVerb(Boolean(values.replace), { csvPath: target, readStdin, out, err });
+  }
   if (verb === 'roots') return rootsVerb(rest, { home, configDir, out, err });
 
   if (verb === 'projects' || verb === 'collect') {
