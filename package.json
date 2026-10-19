@@ -1,0 +1,17 @@
+{
+  "name": "timesheet_fill",
+  "version": "0.1.0",
+  "description": "Claude Code skill that writes a workday's timesheet row from your git commits and Claude Code sessions",
+  "type": "module",
+  "bin": {
+    "timesheet_fill": "bin/timesheet.js"
+  },
+  "engines": {
+    "node": "^20.17 || ^22.13 || >=23.5"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
