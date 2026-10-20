@@ -11,7 +11,9 @@ test('timesheet_fill skill is well-formed', () => {
   assert.match(skill, /^---\nname: timesheet_fill\n/);
   for (const s of ["node '<skill-dir>/bin/timesheet.js' projects --date", "node '<skill-dir>/bin/timesheet.js' collect --date",
     "node '<skill-dir>/bin/timesheet.js' write", "<<'EOF'", '--replace', 'AskUserQuestion', "--project '<path>'", '`truncated`',
-    'Saturday or a Sunday', 'Friday before', 'Monday after'])
+    'Saturday or a Sunday', 'Friday before', 'Monday after',
+    'Add to Odoo', 'Skip Odoo', 'Move to done', 'Leave in progress', 'Write to Odoo',
+    "node '<skill-dir>/bin/timesheet.js' open"])
     assert.ok(skill.includes(s), s);
   assert.ok(!skill.includes('pegasus timesheet'), 'skill must not call the Pegasus CLI');
 });

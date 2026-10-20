@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { spawn as defaultSpawn } from 'node:child_process';
 import { configDir as defaultConfigDir, loadConfig, saveConfig, timesheetDir } from './config.js';
 import { dayWindow } from './timesheet/day.js';
 import { writeRow } from './timesheet/csv.js';
@@ -9,7 +10,7 @@ import { sessionsDir, readSessions } from './timesheet/sessions.js';
 import { hasGit, repoEmail, dayCommits } from './timesheet/commits.js';
 import { scanRepos, repoTop, projectName } from './timesheet/repos.js';
 
-const USAGE = 'usage: timesheet.js projects|collect|write|roots';
+const USAGE = 'usage: timesheet.js projects|collect|write|roots|open';
 const MAX_PROMPTS = 200;
 const OUTPUT_BUDGET = 25000;
 const OPTIONS = { date: { type: 'string' }, project: { type: 'string', multiple: true }, replace: { type: 'boolean' } };
@@ -210,6 +211,44 @@ function rootsVerb([action, dir], { home, configDir, out, err }) {
   return save(roots.filter((r) => r !== abs));
 }
 
+// The browser opener of each platform. On Windows, rundll32 takes the URL as one argument,
+// so the & in an Odoo link is not read as a cmd separator.
+export function opener(url, platform = process.platform) {
+  if (platform === 'win32') return ['rundll32', ['url.dll,FileProtocolHandler', url]];
+  if (platform === 'darwin') return ['open', [url]];
+  return ['xdg-open', [url]];
+}
+
+async function openVerb([url], { spawn, platform, out, err }) {
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(url ?? '');
+  } catch {
+    // reported below
+  }
+  if (!parsedUrl || !['http:', 'https:'].includes(parsedUrl.protocol)) {
+    err('timesheet: open needs an http or https URL');
+    return 1;
+  }
+  const [cmd, args] = opener(url, platform);
+  const opened = await new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(cmd, args, { detached: true, stdio: 'ignore' });
+    } catch {
+      resolve(false);
+      return;
+    }
+    child.once('error', () => resolve(false));
+    child.once('spawn', () => {
+      child.unref();
+      resolve(true);
+    });
+  });
+  out(JSON.stringify({ status: opened ? 'opened' : 'failed', url }));
+  return opened ? 0 : 1;
+}
+
 async function readAll() {
   const chunks = [];
   for await (const chunk of process.stdin) chunks.push(chunk);
@@ -223,6 +262,8 @@ export async function timesheetCommand(args, deps = {}) {
     configDir = defaultConfigDir(),
     csvPath,
     readStdin = readAll,
+    spawn = defaultSpawn,
+    platform = process.platform,
     out = console.log,
     err = console.error,
   } = deps;
@@ -239,6 +280,7 @@ export async function timesheetCommand(args, deps = {}) {
     return writeVerb(Boolean(values.replace), { csvPath: target, readStdin, out, err });
   }
   if (verb === 'roots') return rootsVerb(rest, { home, configDir, out, err });
+  if (verb === 'open') return openVerb(rest, { spawn, platform, out, err });
 
   if (verb === 'projects' || verb === 'collect') {
     try {

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { EventEmitter } from 'node:events';
 import { tmp } from '../test-fixtures/tmp.js';
 import { isolateGit, git, initRepo, commitAt } from '../test-fixtures/git.js';
 import { timesheetCommand } from '../src/timesheet-cmd.js';
@@ -129,7 +130,7 @@ test('git missing still lists session projects', async () => {
 test('bad date and unknown verb', async () => {
   const d = await setup();
   assert.deepEqual(await run(['projects', '--date', '18/10/2026'], d), { code: 1, outs: [], errs: ['timesheet: --date must be YYYY-MM-DD'], json: null });
-  assert.deepEqual((await run(['bogus'], d)).errs, ['usage: timesheet.js projects|collect|write|roots']);
+  assert.deepEqual((await run(['bogus'], d)).errs, ['usage: timesheet.js projects|collect|write|roots|open']);
 });
 
 const entry = { date: '2026-10-18', projects: ['pegasus', '~'], title: "Retrait de l'app « Microsoft 365 »", description: 'Une, deux "trois".' };
@@ -189,4 +190,41 @@ test('roots outside home are scanned', async () => {
   await run(['roots', 'add', path.dirname(client)], d);
   const names = (await run(['projects', '--date', '2026-10-18'], d)).json.projects.map((p) => p.name);
   assert.ok(names.includes('client'));
+});
+
+test('open starts the platform browser opener with the URL', async () => {
+  const url = 'https://odoo.example.com/web#id=7&model=project.task&view_type=form';
+  const calls = [];
+  const spawn = (cmd, args) => {
+    calls.push([cmd, args]);
+    const child = new EventEmitter();
+    child.unref = () => {};
+    setImmediate(() => child.emit('spawn'));
+    return child;
+  };
+  for (const [platform, cmd, args] of [['linux', 'xdg-open', [url]], ['darwin', 'open', [url]],
+    ['win32', 'rundll32', ['url.dll,FileProtocolHandler', url]]]) {
+    calls.length = 0;
+    const r = await run(['open', url], { spawn, platform });
+    assert.equal(r.code, 0);
+    assert.deepEqual(r.json, { status: 'opened', url });
+    assert.deepEqual(calls, [[cmd, args]]);
+  }
+});
+
+test('open reports failed when no opener runs, and refuses non-web URLs', async () => {
+  const url = 'https://odoo.example.com/web#id=7';
+  const spawn = () => {
+    const child = new EventEmitter();
+    setImmediate(() => child.emit('error', new Error('ENOENT')));
+    return child;
+  };
+  const r = await run(['open', url], { spawn, platform: 'linux' });
+  assert.equal(r.code, 1);
+  assert.deepEqual(r.json, { status: 'failed', url });
+  for (const bad of [[], ['file:///etc/passwd'], ['not a url']]) {
+    const b = await run(['open', ...bad], { spawn, platform: 'linux' });
+    assert.equal(b.code, 1);
+    assert.match(b.errs[0], /http or https URL/);
+  }
 });
